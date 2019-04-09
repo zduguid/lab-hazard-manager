@@ -1,0 +1,9 @@
+//------------------------------------------------
+// pOptSensor config block
+
+ProcessConfig = pOptSensor
+{
+   AppTick   = 4
+   CommsTick = 4
+}
+
