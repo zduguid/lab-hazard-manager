@@ -67,6 +67,7 @@ Behavior = BHV_Waypoint
    slip_radius = 15.0
           lead = 15
 
+     updates   = LAWNMOWER_UPDATES
 
 #ifdef VNAME VNAME1
 	points = format=lawnmower,label=jakesearch,x=-40,y=-237.5,height=325,width=240,lane_width=40,rows=ns,startx=0,starty=0

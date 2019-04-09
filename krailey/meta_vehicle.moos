@@ -19,7 +19,7 @@ Processconfig = ANTLER
   Run = pMarinePID         @ NewConsole = false
   Run = pHelmIvP           @ NewConsole = false
   Run = uProcessWatch      @ NewConsole = false
-
+//  Run = pOdometry	   @ NewConsole = true
   Run = pShare             @ NewConsole = false
   Run = pHostInfo          @ NewConsole = false
   Run = uFldNodeBroker     @ NewConsole = false
