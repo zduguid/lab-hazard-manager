@@ -34,3 +34,11 @@ int main()
   }
   std::cout << "\n";*/
 }
+
+double calcSearchTime(sensor_width,search_area_width,search_area_height){
+  double lane_width = sensor_width/2.0;
+  double num_lanes = search_area_width/
+  double total_dist = search_area_height*(2*num_lanes)+search_area_width;
+  return total_dist/2.0;
+
+}
