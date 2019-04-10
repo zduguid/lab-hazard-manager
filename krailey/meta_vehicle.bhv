@@ -59,7 +59,7 @@ Behavior = BHV_Waypoint
   name      = waypt_survey
   pwt       = 100
   condition = MODE==SURVEYING
-  endflag   = RETURN = true
+  //endflag   = RETURN = true
   perpetual = true
 
          speed = 2   // meters per second
@@ -80,6 +80,9 @@ Behavior = BHV_Waypoint
        endflag = NODE_MESSAGE = src_node=$(VNAME),dest_node=all,var_name=SURVEY,string_val=COMPLETE
 
         repeat = 0
+	
+	runflag = FINISHED_SEARCH = false
+	endflag = FINISHED_SEARCH = true
   visual_hints = nextpt_color=red, nextpt_lcolor=green
   visual_hints = vertex_size=1, edge_size=1
 
