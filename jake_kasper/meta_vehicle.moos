@@ -26,6 +26,8 @@ Processconfig = ANTLER
   Run = uFldMessageHandler @ NewConsole = false
   Run = uFldHazardMgrX     @ NewConsole = false
   Run = uXMS               @ NewConsole = false
+  Run = pOptSensor	   @ NewConsole = false
+  Run = uTimerScript	   @ NewConsole = false
 }
   
 //------------------------------------------------------------
@@ -34,6 +36,17 @@ Processconfig = uXMS
   var = DEPLOY, SURVEY, STATION, MOOS_MANUAL_OVERRIDE
 }
 
+
+//--------------------------------------------
+ProcessConfig = uTimerScript
+{
+  AppTick = 2
+  CommsTick = 2
+
+  event = var=RETURN, val="true", time = 6000
+  //HARD CODED, assuming 7200
+
+}
 
 #include plug_uFldNodeBroker.moos
 #include plug_pShare.moos
