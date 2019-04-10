@@ -25,7 +25,7 @@ Processconfig = ANTLER
   Run = uFldMessageHandler @ NewConsole = false
   Run = uFldHazardMgrX     @ NewConsole = false
   Run = uXMS               @ NewConsole = false
-  Run = pOptSensor	   @ NewConsole = false
+  Run = pOptSensor	   @ NewConsole = true
   Run = uTimerScript	   @ NewConsole = false
 }
   
