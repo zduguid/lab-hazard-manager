@@ -70,11 +70,6 @@ class HazardMgrX : public AppCastingMOOSApp
    void postSensorConfigRequest();
    void postSensorInfoRequest();
    void postHazardSetReport();
-
- protected:
-   bool calcHazardBelief(std::string label);
-   unsigned long long int factorial(long int n);
-   double binom_distribution(double p,int k,int n);
    
  private: // Configuration variables
    double       m_swath_width_desired;
