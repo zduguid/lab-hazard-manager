@@ -58,6 +58,7 @@ HazardMgrX::HazardMgrX()
   m_pd_desired          = 0.9;
 
   // State Variables 
+  m_ready_to_send_msg = true;
   m_compile_hazard_set_now  = false;
   m_hazard_sharing_complete = false;
   m_sensor_config_requested = false;
@@ -114,6 +115,15 @@ bool HazardMgrX::OnNewMail(MOOSMSG_LIST &NewMail)
     else if(key == "HAZARD_SHARE_UP") 
       handleNodeMessage(sval);
 
+    else if(key == "HAZARD_MSG_READY") {
+      if (sval  == "true"){
+        m_ready_to_send_msg = true;
+      }
+      else {
+        m_ready_to_send_msg = false;
+      }
+    }
+
     else if(key == "RETURN") {
       if (sval == "true") 
         m_compile_hazard_set_now = true;
@@ -168,8 +178,7 @@ bool HazardMgrX::Iterate()
 
       // if the hazard is to be declared as a hazard and the hazard_set does 
       // not already contain it, it will be added to the hazard_set
-      // if (declare_as_hazard(new_hazard.GetLabel())) { // TODO 
-      if (true) {
+      if (calcHazardBelief(new_hazard.getLabel())) {
         if (!m_hazard_set.hasHazard(new_hazard.getLabel())){
           m_hazard_set.addHazard(new_hazard);
           m_self_haz_reported++;
@@ -183,12 +192,16 @@ bool HazardMgrX::Iterate()
   // sending node messages between vehicles
   if(m_node_message_queue.size()>0) {
       // send a new message to the other vehicle 
-      NodeMessage msg;
-      msg.setSourceNode(m_host_community);
-      msg.setDestNode("all");
-      msg.setVarName("HAZARD_SHARE_UP");
-      msg.setStringVal(m_node_message_queue.front());
-      Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+      if (m_ready_to_send_msg) {
+        NodeMessage msg;
+        msg.setSourceNode(m_host_community);
+        msg.setDestNode("all");
+        msg.setVarName("HAZARD_SHARE_UP");
+        msg.setStringVal(m_node_message_queue.front());
+        Notify("HAZARD_MSG_READY", "false");
+        Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+        m_ready_to_send_msg = false;
+      }
   }
 
   AppCastingMOOSApp::PostReport();
@@ -264,6 +277,7 @@ void HazardMgrX::registerVariables()
   Register("HAZARDSET_REQUEST", 0);
   Register("FINISHED_SEARCH", 0);
   Register("HAZARD_SHARE_UP", 0);
+  Register("HAZARD_MSG_READY", 0);
   Register("RETURN", 0);
 }
 
@@ -599,128 +613,106 @@ bool HazardMgrX::buildReport()
 }
 
 
-
-
-
-
-
 //--------------------------------------------------------------                                                            
-bool HazardMgrX::calcHazardBelief(std::string label){
-
-  //std::string label = "25";                                                                                               
-  //Access map                                                                                                             \
-                                                                                                                            
+bool HazardMgrX::calcHazardBelief(std::string label){                                                                        
   int num_detections=m_hazard_search.m_simple_detect_map[label]; // = m_simple_map[label]                                  \
-                                                                                                                           \
-                                                                                                                            
+                                                                                                                             \
+                                                                                                                              
   int num_lawnmowers=m_num_passes;
   int num_hazards = m_hazard_search.m_simple_classify_map[label];
   int num_requests=m_hazard_search.m_simple_request_map[label];
   //Given                                                                                                                  \
-                                                                                                                            
+                                                                                                                              
   double Pd = m_pd_granted;
   double Pf = m_pfa_granted;
   double Pc = m_pc_granted;
+  //double penalty_miss = 50; //Normalized                                                                                 \
+                                                                                                                              
+  //double penalty_fa = 50;                                                                                                 
+  //Detections-----                                                                                                        \
+                                                                                                                              
+  // Assuming two passes                                                                                                   \
+                                                                                                                              
+  //Given hazard:                                                                                                          \
+                                                                                                                              
+  double prob_dd_given_H = pow(Pd,2);
+  double prob_dn_given_H = Pd*(1-Pd);
+  double prob_nd_given_H = Pd*(1-Pd);
+  double prob_nn_given_H = pow((1-Pd),2);
+  //Given benign:                                                                                                          \
+       
 
-                                                                                                                           
-int num_detections=m_hazard_search.m_simple_detect_map[label]; // = m_simple_map[label]                                  \
-                                                                                                                           \
-                                                                                                                            
-int num_lawnmowers=m_num_passes;
-int num_hazards = m_hazard_search.m_simple_classify_map[label];
-int num_requests=m_hazard_search.m_simple_request_map[label];
-//Given                                                                                                                  \
-                                                                                                                            
-double Pd = m_pd_granted;
-double Pf = m_pfa_granted;
-double Pc = m_pc_granted;
-//double penalty_miss = 50; //Normalized                                                                                 \
-                                                                                                                            
-//double penalty_fa = 50;                                                                                                 
-//Detections-----                                                                                                        \
-                                                                                                                            
-// Assuming two passes                                                                                                   \
-                                                                                                                            
-//Given hazard:                                                                                                          \
-                                                                                                                            
-double prob_dd_given_H = pow(Pd,2);
-double prob_dn_given_H = Pd*(1-Pd);
-double prob_nd_given_H = Pd*(1-Pd);
-double prob_nn_given_H = pow((1-Pd),2);
-//Given benign:                                                                                                          \
-     
+                                                                                                                              
+  double prob_dd_given_B = pow(Pf,2);
+  //(Not used)  double prob_dn_given_B = Pf*(1-Pf);                                                                         
+  double prob_nd_given_B = Pf*(1-Pf);
+  double prob_nn_given_B = pow((1-Pf),2);
+  std::cout<<"Results: "<<prob_dd_given_H<<","<<prob_nd_given_H<<","<<prob_nn_given_H<<std::endl;
+  std::cout<<"Results: "<<prob_dd_given_B<<","<<prob_nd_given_B<<","<<prob_nn_given_B<<std::endl;
 
-                                                                                                                            
-double prob_dd_given_B = pow(Pf,2);
-//(Not used)  double prob_dn_given_B = Pf*(1-Pf);                                                                         
-double prob_nd_given_B = Pf*(1-Pf);
-double prob_nn_given_B = pow((1-Pf),2);
-std::cout<<"Results: "<<prob_dd_given_H<<","<<prob_nd_given_H<<","<<prob_nn_given_H<<std::endl;
-std::cout<<"Results: "<<prob_dd_given_B<<","<<prob_nd_given_B<<","<<prob_nn_given_B<<std::endl;
+  //double ratio_penalty = penalty_miss/(penalty_fa);                                                                      \
+                                                                                                                              
+  double decision_ratio_detection;
+  bool decision_detection;
+  //Cases for detection:                                                                                                   \
+                                                                                                                              
+  if (num_detections >= num_lawnmowers){
+    decision_ratio_detection = prob_dd_given_H;
+   }
+   else if (num_detections == 1){
+     decision_ratio_detection = (prob_nd_given_H)*2.0;
+   }
+   else{
+     //Zero detections                                                                                                      \
+                                                                                                                              
+   }
 
-//double ratio_penalty = penalty_miss/(penalty_fa);                                                                      \
-                                                                                                                            
-double decision_ratio_detection;
-bool decision_detection;
-//Cases for detection:                                                                                                   \
-                                                                                                                            
-if (num_detections >= num_lawnmowers){
-  decision_ratio_detection = prob_dd_given_H;
- }
- else if (num_detections == 1){
-   decision_ratio_detection = (prob_nd_given_H)*2.0;
- }
- else{
-   //Zero detections                                                                                                      \
-                                                                                                                            
- }
-
-if (decision_ratio_detection>0.3){
-  decision_detection = true;
- }
- else{
-   decision_detection = false;
- } //COMMENT HERE                                                                                                         \
-          
+  if (decision_ratio_detection>0.3){
+    decision_detection = true;
+   }
+   else{
+     decision_detection = false;
+   } //COMMENT HERE                                                                                                         \
+            
 
 
-bool decision_classification;
-//Add check if n>20, then binom will fail                                                                                \
-                                                                                                                            
-if (num_requests>20){
-  std::cout<<"greater than 20, ratio: "<<(double)num_hazards/(double)num_requests<<std::endl;
-  if ((double)num_hazards/(double)num_requests>0.3){
-    decision_classification = true;
-  }
-  else{
-    decision_classification = false;
-  }
- }
-if (num_requests<20){
+  bool decision_classification;
+  //Add check if n>20, then binom will fail                                                                                \
+                                                                                                                              
+  if (num_requests>20){
+    std::cout<<"greater than 20, ratio: "<<(double)num_hazards/(double)num_requests<<std::endl;
+    if ((double)num_hazards/(double)num_requests>0.3){
+      decision_classification = true;
+    }
+    else{
+      decision_classification = false;
+    }
+   }
+  if (num_requests<20){
 
-  double prob_hazards_in_requests = binom_distribution(Pc, num_hazards, num_requests);
-  std::cout<<"prob of hazards in requests: "<<prob_hazards_in_requests<<std::endl;
-  double decision_ratio_classification = prob_hazards_in_requests/(1-prob_hazards_in_requests); //normalized             \
-                                                                                                                            
-  std::cout<<"decision ratio classification: "<<decision_ratio_classification<<std::endl;
-  if (decision_ratio_classification>0.3){ //try normalizing                                                              \
-                                                                                                                            
-    decision_classification = true;
-  }
-  else{
-    decision_classification = false;
-  }
- }
-bool decision_final;
-std::cout<<"Decision: "<<decision_detection<<", "<<decision_classification<<std::endl;
-if (num_requests>2){
-  decision_final = decision_classification;
- }
- else{
-   decision_final = decision_detection;
- }
-std::cout<<"final decision: "<<decision_final<<std::endl;
-return decision_final;
+    double prob_hazards_in_requests = binom_distribution(Pc, num_hazards, num_requests);
+    std::cout<<"prob of hazards in requests: "<<prob_hazards_in_requests<<std::endl;
+    double decision_ratio_classification = prob_hazards_in_requests/(1-prob_hazards_in_requests); //normalized             \
+                                                                                                                              
+    std::cout<<"decision ratio classification: "<<decision_ratio_classification<<std::endl;
+    if (decision_ratio_classification>0.3){ //try normalizing                                                              \
+                                                                                                                              
+      decision_classification = true;
+    }
+    else{
+      decision_classification = false;
+    }
+   }
+  bool decision_final;
+  std::cout<<"Decision: "<<decision_detection<<", "<<decision_classification<<std::endl;
+  if (num_requests>2){
+    decision_final = decision_classification;
+   }
+   else{
+     decision_final = decision_detection;
+   }
+  std::cout<<"final decision: "<<decision_final<<std::endl;
+  return decision_final;
 }
 
 

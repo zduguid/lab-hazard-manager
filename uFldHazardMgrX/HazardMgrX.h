@@ -87,6 +87,7 @@ class HazardMgrX : public AppCastingMOOSApp
    bool         m_compile_hazard_set_now;
    bool         m_hazard_sharing_complete;
    bool         m_waiting_for_ack;
+   bool         m_ready_to_send_msg;
 
    unsigned int m_sensor_config_reqs;
    unsigned int m_sensor_config_acks;
