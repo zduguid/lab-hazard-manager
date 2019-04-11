@@ -55,11 +55,6 @@ public:
   std::string GetClassificationCount(std::string hazard_search_id);
   std::string GetConsistency(std::string hazard);
 
-  std::string GetHazardNodeMessage(std::string hazard_search_id);
-  void        ParseHazardNodeMessage(std::string node_message);
-
-  double GetHazardBeliefState(std::string hazard);
-
   // maps unique hazard to counts of detect, classify, and request 
   std::map<std::string, int> m_simple_detect_map;
   std::map<std::string, int> m_simple_classify_map;

@@ -189,35 +189,6 @@ string HazardSearch::GetConsistency(string hazard){
 
 
 //---------------------------------------------------------
-// GetHazardNodeMessage
-
-string HazardSearch::GetHazardNodeMessage(string hazard_search_id)
-{
-  // TODO implement
-  return (" ");
-}
-
-
-//---------------------------------------------------------
-// ParseHazardNodeMessage
-
-void HazardSearch::ParseHazardNodeMessage(string node_message)
-{
-  // TODO implement
-}
-
-
-//---------------------------------------------------------
-// GetHazardBeliefState
-
-double HazardSearch::GetHazardBeliefState(string hazard)
-{
-  // TODO implement
-  return(0.0);
-}
-
-
-//---------------------------------------------------------
 // setExpectedDetectionQuery
 
 void HazardSearch::setExpectedDetectionQuery()

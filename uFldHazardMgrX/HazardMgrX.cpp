@@ -27,11 +27,13 @@
 #include <iterator>
 #include <list>
 #include <map>
+#include <random>
 #include <set>
 #include <string>
 
 #include "MBUtils.h"
 #include "NodeMessage.h"
+#include "NodeMessageUtils.h"
 #include "HazardMgrX.h"
 #include "HazardSearch.h"
 #include "XYFormatUtilsHazard.h"
@@ -51,8 +53,13 @@ HazardMgrX::HazardMgrX()
   m_pd_desired          = 0.9;
 
   // State Variables 
+  m_compile_hazard_set_now  = false;
+  m_hazard_sharing_complete = false;
   m_sensor_config_requested = false;
+  m_waiting_for_ack     = false;
   m_sensor_config_set   = false;
+  m_collab_haz_reported = 0;
+  m_self_haz_reported   = 0;
   m_swath_width_granted = 0;
   m_pd_granted          = 0;
   m_pfa_granted         = 0;
@@ -63,10 +70,7 @@ HazardMgrX::HazardMgrX()
   m_sensor_report_reqs = 0;
   m_detection_reports  = 0;
 
-  m_summary_reports    = 0;
-
-  // number of times an obstacle is passed over
-  // TODO make new variable posting when next lawnmower begins 
+  m_summary_reports    = 0; 
   m_num_passes         = 0;
 }
 
@@ -102,9 +106,17 @@ bool HazardMgrX::OnNewMail(MOOSMSG_LIST &NewMail)
     else if(key == "UHZ_MISSION_PARAMS") 
       handleMailMissionParams(sval);
 
+    else if(key == "HAZARD_SHARE_UP") 
+      handleNodeMessage(sval);
+
+    else if(key == "RETURN") {
+      if (sval == "true") 
+        m_compile_hazard_set_now = true;
+    }
+
     else if(key == "FINISHED_SEARCH") {
       if (sval == "true") 
-        m_num_passes++;
+        m_num_passes+= 2;
     }
 
     else 
@@ -139,13 +151,39 @@ bool HazardMgrX::Iterate()
   if(m_sensor_config_set)
     postSensorInfoRequest();
 
+
+  if (m_compile_hazard_set_now) {
+    
+    // iterate through the list of hazards that have been detected before 
+    set<string>::iterator it = m_hazard_search_set.begin();
+    while (it != m_hazard_search_set.end()){
+
+      // construct a hazard from the hazard_string
+      XYHazard new_hazard = string2Hazard(*it);
+
+      // if the hazard is to be declared as a hazard and the hazard_set does 
+      // not already contain it, it will be added to the hazard_set
+      // if (declare_as_hazard(new_hazard.GetLabel())) { // TODO 
+      if (true) {
+        if (!m_hazard_set.hasHazard(new_hazard.getLabel())){
+          m_hazard_set.addHazard(new_hazard);
+          m_self_haz_reported++;
+          m_node_message_queue.push_back(*it);
+        }
+      }
+      it++; 
+    }
+  }
+
+  // sending node messages between vehicles
   if(m_node_message_queue.size()>0) {
-    NodeMessage msg;
-    msg.setSourceNode(m_host_community);
-    msg.setDestNode("all");
-    msg.setVarName("HAZARD_SEARCH_UP");
-    msg.setStringVal(m_hazard_search.GetHazardNodeMessage(m_node_message_queue.front()));
-    Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+      // send a new message to the other vehicle 
+      NodeMessage msg;
+      msg.setSourceNode(m_host_community);
+      msg.setDestNode("all");
+      msg.setVarName("HAZARD_SHARE_UP");
+      msg.setStringVal(m_node_message_queue.front());
+      Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
   }
 
   AppCastingMOOSApp::PostReport();
@@ -220,6 +258,8 @@ void HazardMgrX::registerVariables()
   Register("UHZ_MISSION_PARAMS", 0);
   Register("HAZARDSET_REQUEST", 0);
   Register("FINISHED_SEARCH", 0);
+  Register("HAZARD_SHARE_UP", 0);
+  Register("RETURN", 0);
 }
 
 
@@ -247,6 +287,36 @@ void HazardMgrX::postSensorInfoRequest()
 
   m_sensor_report_reqs++;
   Notify("UHZ_SENSOR_REQUEST", request);
+}
+
+
+//---------------------------------------------------------
+// Procedure: handleNodeMessage
+
+void HazardMgrX::handleNodeMessage(string node_message_str)
+{
+  // handle the acknowledgment response -> send next message
+  if (node_message_str == "ack") {
+    m_node_message_queue.pop_front();
+  }
+
+  // add the collaborators hazard to the report 
+  else {
+    m_latest_received_node_msg = node_message_str;
+    XYHazard new_hazard = string2Hazard(node_message_str);
+    if (!m_hazard_set.hasHazard(new_hazard.getLabel())){
+      m_hazard_set.addHazard(new_hazard);
+      m_collab_haz_reported++;
+    }
+
+    // send ack to collaborator
+    NodeMessage msg;
+    msg.setSourceNode(m_host_community);
+    msg.setDestNode("all");
+    msg.setVarName("HAZARD_SHARE_UP");
+    msg.setStringVal("ack");
+    Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+  }
 }
 
 
@@ -324,8 +394,10 @@ bool HazardMgrX::handleMailDetectionReport(string str)
   string event = "New Det, label=" + hazlabel;
   reportEvent(event);
 
-  // TODO add to queue of items to continually request (add hazard itself to queue)
-  string req = "vname=" + m_host_community + ",label=" + hazlabel;
+  // add newly detected items to the top of the classification queue
+  string req = "vname=" + m_host_community + 
+               ",label=" + hazlabel + 
+               ",priority=100,action=top";
   Notify("UHZ_CLASSIFY_REQUEST", req);
 
   m_hazard_search_set.insert(str);
@@ -340,12 +412,6 @@ bool HazardMgrX::handleMailDetectionReport(string str)
   else {
     m_hazard_search.m_simple_detect_map[hazlabel]=1;
   }
-
-  // check if node message is already on the queue
-  // TODO change this to just sharing the final decision with other vehicle 
-  // TODO take the set union between vehicles regarding what to send in the hazard request 
-  m_node_message_queue.push_back(search_id);
-
   return(true);
 }
 
@@ -392,10 +458,6 @@ bool HazardMgrX::handleMailHazardReport(string str)
       m_hazard_search.m_simple_classify_map[hazlabel]=1;
     }
   }
-
-  // TODO check if node message is already on the queue
-  m_node_message_queue.push_back(search_id);
-
   return(true);
 }
 
@@ -453,10 +515,18 @@ bool HazardMgrX::buildReport()
   //  + 'ClassReq' is the number of classification requests
   //  + 'ClassHaz' is the number of times the obstacle is classified as a hazard
   m_msgs << "--------------------------------------------"       << endl;
-  m_msgs << "Detection/Classification Summary:"                  << endl;
+  m_msgs << "Total  Haz Reported: " << to_string(m_hazard_set.size()) << endl;
+  m_msgs << "Self   Haz Reported: " << to_string(m_self_haz_reported) << endl;
+  m_msgs << "Collab Haz Reported: " << to_string(m_collab_haz_reported) << endl;
+  m_msgs << "--------------------------------------------"       << endl;
+  m_msgs << "Self   Obj Detected: " << to_string(m_simple_hazard_set.size()) << endl;
+  m_msgs << "Self   Haz MsgQueue: " << to_string(m_node_message_queue.size()) << endl;
+  m_msgs << "--------------------------------------------"       << endl;
+  m_msgs << "Last   Msg Received: " << m_latest_received_node_msg << endl;
+  m_msgs << "--------------------------------------------"       << endl;
   ACTable actab(7);
   string vname = m_host_community; 
-  actab << "HazID | # | NumPass | ActDet | ClassReq | ClassHaz | # ";
+  actab << "HazID | # | NumPass | Detects | ClassReqs | ClassHaz | # ";
   actab.addHeaderLines();
 
   // add a new line to the table for each element seen

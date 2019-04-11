@@ -64,6 +64,7 @@ class HazardMgrX : public AppCastingMOOSApp
    bool handleMailHazardReport(std::string);
    void handleMailReportRequest();
    void handleMailMissionParams(std::string);
+   void handleNodeMessage(std::string);
 
  protected: 
    void postSensorConfigRequest();
@@ -78,6 +79,9 @@ class HazardMgrX : public AppCastingMOOSApp
  private: // State variables
    bool         m_sensor_config_requested;
    bool         m_sensor_config_set;
+   bool         m_compile_hazard_set_now;
+   bool         m_hazard_sharing_complete;
+   bool         m_waiting_for_ack;
 
    unsigned int m_sensor_config_reqs;
    unsigned int m_sensor_config_acks;
@@ -85,6 +89,8 @@ class HazardMgrX : public AppCastingMOOSApp
    unsigned int m_sensor_report_reqs;
    unsigned int m_detection_reports;
    unsigned int m_num_passes;
+   unsigned int m_self_haz_reported;
+   unsigned int m_collab_haz_reported;
 
    unsigned int m_summary_reports;
 
@@ -95,13 +101,16 @@ class HazardMgrX : public AppCastingMOOSApp
    double       m_pc_granted;
 
    XYHazardSet  m_hazard_set;
+   XYHazardSet  m_hazard_set_shared;
    XYPolygon    m_search_region;
 
-   std::string  m_config_id;
    HazardSearch m_hazard_search;
+   std::string  m_config_id;
+   std::string  m_latest_received_node_msg;
    std::set<std::string> m_hazard_search_set;
    std::set<std::string> m_simple_hazard_set;
    std::list<std::string> m_node_message_queue;
+   std::set<std::string>::iterator m_class_haz_it;
 };
 
 #endif 
