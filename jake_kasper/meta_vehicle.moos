@@ -44,11 +44,12 @@ ProcessConfig = uTimerScript_RETURN
   AppTick = 2
   CommsTick = 2
 
-  event = var=RETURN, val="true", time = 6000
+  event = var=RETURN, val="true", time = 5000
+  event = var=HAZARDSET_REQUEST, val="true", time = 7000 
 
   //HARD CODED, assuming 7200
-
 }
+
 
 //--------------------------------------------
 ProcessConfig = uTimerScript_MSG
