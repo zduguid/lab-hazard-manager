@@ -62,6 +62,7 @@ class HazardMgrX : public AppCastingMOOSApp
    bool handleMailSensorOptionsSummary(std::string) {return(true);}
    bool handleMailDetectionReport(std::string);
    bool handleMailHazardReport(std::string);
+   void handleHazardMsgReady();
    void handleMailReportRequest();
    void handleMailMissionParams(std::string);
    void handleNodeMessage(std::string);
@@ -88,7 +89,9 @@ class HazardMgrX : public AppCastingMOOSApp
    bool         m_hazard_sharing_complete;
    bool         m_waiting_for_ack;
    bool         m_ready_to_send_msg;
+   bool         m_send_ack_msg_now;
 
+   unsigned int m_ack_messages_received;
    unsigned int m_sensor_config_reqs;
    unsigned int m_sensor_config_acks;
 

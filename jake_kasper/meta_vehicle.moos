@@ -59,7 +59,6 @@ ProcessConfig = uTimerScript_MSG
   reset_max = unlimited
   reset_time = end
 
-  event = var=HAZARD_MSG_READY, val="true", time = 30
   event = var=HAZARD_MSG_READY, val="true", time = 60
 
 }

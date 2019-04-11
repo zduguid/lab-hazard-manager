@@ -64,6 +64,7 @@ HazardMgrX::HazardMgrX()
   m_sensor_config_requested = false;
   m_waiting_for_ack     = false;
   m_sensor_config_set   = false;
+  m_send_ack_msg_now    = false;
   m_collab_haz_reported = 0;
   m_self_haz_reported   = 0;
   m_swath_width_granted = 0;
@@ -118,6 +119,7 @@ bool HazardMgrX::OnNewMail(MOOSMSG_LIST &NewMail)
     else if(key == "HAZARD_MSG_READY") {
       if (sval  == "true"){
         m_ready_to_send_msg = true;
+        handleHazardMsgReady();
       }
       else {
         m_ready_to_send_msg = false;
@@ -189,23 +191,43 @@ bool HazardMgrX::Iterate()
     }
   }
 
-  // sending node messages between vehicles
-  if(m_node_message_queue.size()>0) {
-      // send a new message to the other vehicle 
-      if (m_ready_to_send_msg) {
+  AppCastingMOOSApp::PostReport();
+  return(true);
+}
+
+
+//---------------------------------------------------------
+// Procedure: handleHazardMsgReady
+
+void HazardMgrX::handleHazardMsgReady()
+{
+  // proceed if we are ready to send a new message
+  if (m_ready_to_send_msg) {
+
+      // send an acknowledgment message 
+      if (m_send_ack_msg_now) {
         NodeMessage msg;
         msg.setSourceNode(m_host_community);
         msg.setDestNode("all");
         msg.setVarName("HAZARD_SHARE_UP");
-        msg.setStringVal(m_node_message_queue.front());
+        msg.setStringVal("ack");
         Notify("HAZARD_MSG_READY", "false");
         Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+        m_send_ack_msg_now = false;
         m_ready_to_send_msg = false;
-      }
-  }
 
-  AppCastingMOOSApp::PostReport();
-  return(true);
+      // otherwise, check if we have a message to send
+      } else if (m_node_message_queue.size() > 0){
+          NodeMessage msg;
+          msg.setSourceNode(m_host_community);
+          msg.setDestNode("all");
+          msg.setVarName("HAZARD_SHARE_UP");
+          msg.setStringVal(m_node_message_queue.front());
+          Notify("HAZARD_MSG_READY", "false");
+          Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+          m_ready_to_send_msg = false;
+      }
+   }  
 }
 
 
@@ -316,6 +338,7 @@ void HazardMgrX::handleNodeMessage(string node_message_str)
 {
   // handle the acknowledgment response -> send next message
   if (node_message_str == "ack") {
+    m_ack_messages_received++;
     m_node_message_queue.pop_front();
   }
 
@@ -328,13 +351,8 @@ void HazardMgrX::handleNodeMessage(string node_message_str)
       m_collab_haz_reported++;
     }
 
-    // send ack to collaborator
-    NodeMessage msg;
-    msg.setSourceNode(m_host_community);
-    msg.setDestNode("all");
-    msg.setVarName("HAZARD_SHARE_UP");
-    msg.setStringVal("ack");
-    Notify("NODE_MESSAGE_LOCAL", msg.getSpec());
+    // send ack to collaborator on next message send opportunity
+    m_send_ack_msg_now = true;
   }
 }
 
@@ -540,6 +558,7 @@ bool HazardMgrX::buildReport()
   m_msgs << "--------------------------------------------"       << endl;
   m_msgs << "Self   Obj Detected: " << to_string(m_simple_hazard_set.size()) << endl;
   m_msgs << "Self   Haz MsgQueue: " << to_string(m_node_message_queue.size()) << endl;
+  m_msgs << "Self   Ack Received: " << to_string(m_ack_messages_received) << endl;
   m_msgs << "--------------------------------------------"       << endl;
   m_msgs << "Last   Msg Received: " << m_latest_received_node_msg << endl;
   m_msgs << "--------------------------------------------"       << endl;
@@ -692,10 +711,10 @@ bool HazardMgrX::calcHazardBelief(std::string label){
 
     double prob_hazards_in_requests = binom_distribution(Pc, num_hazards, num_requests);
     std::cout<<"prob of hazards in requests: "<<prob_hazards_in_requests<<std::endl;
-    double decision_ratio_classification = prob_hazards_in_requests/(1-prob_hazards_in_requests); //normalized             \
+    double decision_ratio_classification = prob_hazards_in_requests;
                                                                                                                               
     std::cout<<"decision ratio classification: "<<decision_ratio_classification<<std::endl;
-    if (decision_ratio_classification>0.3){ //try normalizing                                                              \
+    if (decision_ratio_classification>0.6){ //try normalizing                                                              \
                                                                                                                               
       decision_classification = true;
     }
@@ -705,7 +724,7 @@ bool HazardMgrX::calcHazardBelief(std::string label){
    }
   bool decision_final;
   std::cout<<"Decision: "<<decision_detection<<", "<<decision_classification<<std::endl;
-  if (num_requests>2){
+  if (num_requests>=1){
     decision_final = decision_classification;
    }
    else{
