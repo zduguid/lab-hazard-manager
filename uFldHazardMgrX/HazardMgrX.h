@@ -24,9 +24,22 @@
 #ifndef UFLD_HAZARD_MGR_HEADER
 #define UFLD_HAZARD_MGR_HEADER
 
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <iterator>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+
 #include "MOOS/libMOOS/Thirdparty/AppCasting/AppCastingMOOSApp.h"
+#include "NodeMessage.h"
+#include "HazardSearch.h"
+#include "XYHazard.h"
 #include "XYHazardSet.h"
 #include "XYPolygon.h"
+
 
 class HazardMgrX : public AppCastingMOOSApp
 {
@@ -48,7 +61,7 @@ class HazardMgrX : public AppCastingMOOSApp
    bool handleMailSensorConfigAck(std::string);
    bool handleMailSensorOptionsSummary(std::string) {return(true);}
    bool handleMailDetectionReport(std::string);
-   bool handleMailHazardReport(std::string) {return(true);}
+   bool handleMailHazardReport(std::string);
    void handleMailReportRequest();
    void handleMailMissionParams(std::string);
 
@@ -58,29 +71,37 @@ class HazardMgrX : public AppCastingMOOSApp
    void postHazardSetReport();
    
  private: // Configuration variables
-   double      m_swath_width_desired;
-   double      m_pd_desired;
-   std::string m_report_name;
+   double       m_swath_width_desired;
+   double       m_pd_desired;
+   std::string  m_report_name;
 
  private: // State variables
-   bool   m_sensor_config_requested;
-   bool   m_sensor_config_set;
+   bool         m_sensor_config_requested;
+   bool         m_sensor_config_set;
 
    unsigned int m_sensor_config_reqs;
    unsigned int m_sensor_config_acks;
 
    unsigned int m_sensor_report_reqs;
    unsigned int m_detection_reports;
+   unsigned int m_num_passes;
 
    unsigned int m_summary_reports;
 
-   double m_swath_width_granted;
-   double m_pd_granted;
+   double       m_transit_path_width;
+   double       m_swath_width_granted;
+   double       m_pd_granted;
+   double       m_pfa_granted;
+   double       m_pc_granted;
 
-   XYHazardSet m_hazard_set;
-   XYPolygon   m_search_region;
-   
-   double      m_transit_path_width;
+   XYHazardSet  m_hazard_set;
+   XYPolygon    m_search_region;
+
+   std::string  m_config_id;
+   HazardSearch m_hazard_search;
+   std::set<std::string> m_hazard_search_set;
+   std::set<std::string> m_simple_hazard_set;
+   std::list<std::string> m_node_message_queue;
 };
 
 #endif 
