@@ -29,8 +29,8 @@ int main(){
   //Access map
   int num_detections=1; // = m_simple_map[label]
   int num_lawnmowers=2;
-  int num_hazards=1;
-  int num_requests=5;
+  int num_hazards=450;
+  int num_requests=500;
   //Given
   double Pd = 0.7;
   double Pf = 0.3;
@@ -78,7 +78,8 @@ int main(){
   bool decision_classification;
   //Add check if n>20, then binom will fail
   if (num_requests>20){
-    if (num_hazards/num_requests>0.3){
+    std::cout<<"greater than 20, ratio: "<<(double)num_hazards/(double)num_requests<<std::endl;
+    if ((double)num_hazards/(double)num_requests>0.3){
       decision_classification = true;
     }
     else{
