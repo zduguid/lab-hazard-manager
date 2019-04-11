@@ -17,6 +17,7 @@ Processconfig = ANTLER
   Run = pLogger            @ NewConsole = false
   Run = pNodeReporter      @ NewConsole = false
   Run = pMarinePID         @ NewConsole = false
+  Run = pOptSensor	       @ NewConsole = false
   Run = pHelmIvP           @ NewConsole = false
   Run = uProcessWatch      @ NewConsole = false
 
@@ -26,7 +27,6 @@ Processconfig = ANTLER
   Run = uFldMessageHandler @ NewConsole = false
   Run = uFldHazardMgrX     @ NewConsole = false
   Run = uXMS               @ NewConsole = false
-  Run = pOptSensor	       @ NewConsole = false
   Run = uTimerScript	     @ NewConsole = false ~uTimerScript_RETURN
   Run = uTimerScript       @ NewConsole = false ~uTimerScript_MSG
 }

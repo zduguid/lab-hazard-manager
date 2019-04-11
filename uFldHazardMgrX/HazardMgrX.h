@@ -119,7 +119,6 @@ class HazardMgrX : public AppCastingMOOSApp
    std::set<std::string> m_hazard_search_set;
    std::set<std::string> m_simple_hazard_set;
    std::list<std::string> m_node_message_queue;
-   std::set<std::string>::iterator m_class_haz_it;
 };
 
 #endif 

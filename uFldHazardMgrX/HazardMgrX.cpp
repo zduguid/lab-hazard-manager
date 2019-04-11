@@ -172,22 +172,24 @@ bool HazardMgrX::Iterate()
   if (m_compile_hazard_set_now) {
     
     // iterate through the list of hazards that have been detected before 
-    set<string>::iterator it = m_hazard_search_set.begin();
-    while (it != m_hazard_search_set.end()){
+    if (m_hazard_search_set.size() > 0){
+      set<string>::iterator it = m_hazard_search_set.begin();
+      while (it != m_hazard_search_set.end()){
 
-      // construct a hazard from the hazard_string
-      XYHazard new_hazard = string2Hazard(*it);
+        // construct a hazard from the hazard_string
+        XYHazard new_hazard = string2Hazard(*it);
 
-      // if the hazard is to be declared as a hazard and the hazard_set does 
-      // not already contain it, it will be added to the hazard_set
-      if (calcHazardBelief(new_hazard.getLabel())) {
-        if (!m_hazard_set.hasHazard(new_hazard.getLabel())){
-          m_hazard_set.addHazard(new_hazard);
-          m_self_haz_reported++;
-          m_node_message_queue.push_back(*it);
+        // if the hazard is to be declared as a hazard and the hazard_set does 
+        // not already contain it, it will be added to the hazard_set
+        if (calcHazardBelief(new_hazard.getLabel())) {
+          if (!m_hazard_set.hasHazard(new_hazard.getLabel())){
+            m_hazard_set.addHazard(new_hazard);
+            m_self_haz_reported++;
+            m_node_message_queue.push_back(*it);
+          }
         }
+        it++; 
       }
-      it++; 
     }
   }
 
@@ -714,7 +716,7 @@ bool HazardMgrX::calcHazardBelief(std::string label){
     double decision_ratio_classification = prob_hazards_in_requests;
                                                                                                                               
     std::cout<<"decision ratio classification: "<<decision_ratio_classification<<std::endl;
-    if (decision_ratio_classification>0.6){ //try normalizing                                                              \
+    if (decision_ratio_classification>0.3){ //try normalizing                                                              \
                                                                                                                               
       decision_classification = true;
     }
